@@ -71,21 +71,28 @@ public sealed partial class OnePasswordManager : IOnePasswordManager
 
     private static bool IsCommandAvailable(string command)
     {
-
-        ProcessStartInfo processStartInfo = new ProcessStartInfo
-        { 
-            FileName = command,
-            Arguments = "--version",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        using (Process p = Process.Start(processStartInfo) ?? throw new InvalidOperationException())
+        try
         {
-            p.WaitForExit();
-            return p.ExitCode == 0;
+            ProcessStartInfo processStartInfo = new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = "--version",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using (Process p = Process.Start(processStartInfo) ?? throw new InvalidOperationException())
+            {
+                p.WaitForExit();
+                return p.ExitCode == 0;
+            }
         }
+        catch
+        {
+            return false;
+        }
+
 
     }
 
