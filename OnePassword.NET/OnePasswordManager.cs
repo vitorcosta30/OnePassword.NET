@@ -41,10 +41,21 @@ public sealed partial class OnePasswordManager : IOnePasswordManager
     public OnePasswordManager(OnePasswordManagerOptions? options = null)
     {
         var configuration = ValidateOptions(options);
+        if (configuration.Path.Length > 0)
+        {
+            _opPath = Path.Combine(configuration.Path, configuration.Executable);
+            if (!File.Exists(_opPath))
+                throw new FileNotFoundException($"The 1Password CLI executable ({configuration.Executable}) was not found in folder \"{Path.GetDirectoryName(_opPath)}\".");
+        }
+        else
+        {
+            _opPath = "op";
+            if (!IsCommandAvailable(_opPath))
+            {
+                throw new FileNotFoundException("1Password executable not found, add it to PATH variable or pass its location as an argument");
+            }
 
-        _opPath = configuration.Path.Length > 0 ? Path.Combine(configuration.Path, configuration.Executable) : Path.Combine(Directory.GetCurrentDirectory(), configuration.Executable);
-        if (!File.Exists(_opPath))
-            throw new FileNotFoundException($"The 1Password CLI executable ({configuration.Executable}) was not found in folder \"{Path.GetDirectoryName(_opPath)}\".");
+        }
 
         _verbose = configuration.Verbose;
 
@@ -56,6 +67,26 @@ public sealed partial class OnePasswordManager : IOnePasswordManager
             _mode = Mode.ServiceAccount;
 
         Version = GetVersion();
+    }
+
+    private static bool IsCommandAvailable(string command)
+    {
+
+        ProcessStartInfo processStartInfo = new ProcessStartInfo
+        { 
+            FileName = command,
+            Arguments = "--version",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        using (Process p = Process.Start(processStartInfo) ?? throw new InvalidOperationException())
+        {
+            p.WaitForExit();
+            return p.ExitCode == 0;
+        }
+
     }
 
     /// <summary>Initializes a new instance of <see cref="OnePasswordManager" /> for the specified 1Password CLI executable.</summary>
